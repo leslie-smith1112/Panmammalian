@@ -40,7 +40,8 @@ outDir=$(readlink -f $4)
 
 log "Runnning on $(hostname)."
 
-Stages="hisat2 fastqc dexcount aorrg markdup splitncr hapcall varfilt snpeff mpicker"
+#Stages="hisat2 fastqc dexcount aorrg markdup splitncr hapcall varfilt snpeff mpicker"
+Stages="hisat2 fastqc dexcount aorrg markdup splitncr" 
 
 declare -A aaStages
 
@@ -69,9 +70,10 @@ done
 
 #DISBATCH_ROOT=/blue/kgraim/freya
 #export PYTHONPATH=/blue/kgraim/leslie.smith1/freya/disBatch
-export PYTHONPATH=/apps/disbatch/2.5/disBatch
+#export PYTHONPATH=/apps/disbatch/2.5/disBatch
 #export PATH=${DISBATCH_ROOT}/disBatch:$PATH
-
+DISBATCH_ROOT=/apps/disbatch/2.5
+export PYTHONPATH=${DISBATCH_ROOT}/disBatch:$PATH
 #GATKJar=${CMWF_ROOT}/jars/GenomeAnalysisTK-3.8-0.jar
 #PicardJar=${CMWF_ROOT}/jars/picard.jar
 #SnpEffJar=${CMWF_ROOT}/jars/snpEff/snpEff.jar
