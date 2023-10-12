@@ -29,9 +29,8 @@ old_ensembl <- useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", host = "https://may2
 gene_names <-  getBM(attributes = c('ensembl_gene_id', 'external_gene_name'), filters = list(ensembl_gene_id = canine_expression$Genes),
                      mart = old_ensembl)
 canine_final <- merge(gene_names, canine_expression, by.x = "ensembl_gene_id", by.y = "Genes")
-canine_final <- canine_final[,-1]
+canine_final <- canine_final[,-1] #drop entrez ids 
 canine_final[1:5,1:5]
-
 write.table(canine_final, here("data","testing","canine_expr.tsv"),sep = "\t", col.names = TRUE, row.names = FALSE)
 
 # summarise values by gene (for duplicate genes) # 
@@ -170,29 +169,5 @@ all_meta$CancerType[grep("Renal Clear Cell Carcinoma", all_meta$CancerType, igno
 all_meta$CancerType[grep("Head and Neck Squamous Carcinoma", all_meta$CancerType, ignore.case = FALSE, fixed = TRUE)] <- "Head and Neck Cancer"
 
 write.table(all_meta, here("data","processed_data","canine_human_merged_metadata.tsv"), sep = "\t", col.names = TRUE, row.names = FALSE)
-
-
-### LESLIE RETRY ### 
-#read in canine and human NOT logged 
-canine_expr <- readr::read_tsv(here("data","testing","canine_expr.tsv")) 
-human_expression <- readr::read_tsv(here("data","homo_sapiens","panCancer_Atlas","final_all_panCancerExpression.tsv"))
-all <- merge(human_expression, canine_expr, by.x = "Hugo_Symbol", by.y = "external_gene_name")
-all <- all %>% group_by(Hugo_Symbol) %>% summarise_if(is.numeric, mean, na.rm = TRUE)
-
-human_batch.ids <- readr::read_tsv(here("data","processed_data","human_batch_ids.tsv"))
-canine_batch.ids <- readr::read_tsv(here("data","processed_data","canine_batch_ids.tsv"))
-
-human_batch <- human_batch.ids$Batch
-names(human_batch) <- human_batch.ids$Sample
-canine_batch <- canine_batch.ids$Batch
-names(canine_batch) <- canine_batch.ids$Sample
-all_batch <- c(human_batch, canine_batch)
-
-head(colnames(canine_final))
-head(canine_batch)
-head(canine_batch.ids)
-
-all_expression <- column_to_rownames(all_expression, "Gene")
-all_batch <- all_batch[names(all_batch) %in% colnames(all_expression)]
 
 
