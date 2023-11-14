@@ -127,7 +127,7 @@ pushd ${outDir}/tasks
 
 hisat2Tasks_prefix='module load hisat2/${hisat2_version} && module load samtools/${samtools_version} && module list && '
 fastqcTasks_prefix='module load fastqc/${fastqc_version} && '
-dexTasks_prefix='module load conda && conda activate /blue/kgraim/leslie.smith1/.conda/envs/freyaPip/ &&'
+dexTasks_prefix='module load htseq && '
 aorrgTasks_prefix='module load picard/${picard_version} && '
 mdTasks_prefix='module load picard/${picard_version} && '
 sncrTasks_prefix='module load gatk/${gatk_version} && '
