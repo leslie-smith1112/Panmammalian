@@ -10,7 +10,7 @@ log_dir   = "/orange/kgraim/panmammalian/genomes/logs"
 GENOME_ACCESSIONS = []
 ORGANISM_NAME = []
 LAMEN_TERM = []
-with open("test.me", "r") as acc_file:
+with open("dog_test.csv", "r") as acc_file:
     csv_reader = csv.reader(acc_file)
     for row in csv_reader:
         if (len(row) > 0):
@@ -36,7 +36,6 @@ rule all:
         #expand( "{organism}" + "/" + "{genome}" + "/" + "genomic.fna", organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
         #expand("{organism}" + "/" + "{genome}" + "/"+ "genomic.gtf", organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS)
         #SECOND RULE 
-        #expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic."+ "{file}" + ".ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS, file=hisat_index),
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.1.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.2.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.3.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
@@ -62,39 +61,33 @@ rule download_assemblies:
         #gen_accessions = "acc_list.txt"
 
     output:
+        out_fna = "{organism}" + "/" + "{genome}" + "/" + "genomic.fna",
+        out_gtf = "{organism}" + "/" + "{genome}" + "/" + "genomic.gtf"
         #fna_file =  "{organism}" + "/" + "{organism}" + "_" + "{genome}_genomic.gtf.gz"
         #gtf_file =  "{organism}" + "/" + "{organism}" + "_" + "{genome}_genomic.gff.gz"
         #fastq   = fastq_dir + "/" + "{sample_sra_id}.fastq.gz"
         #outfile= "{organism}/{genome}.zip"
-       fna_out="{params.dir}/ncbi_dataset/data/{params.acc}/{params.acc}{fna_name}genomic.fna",
-       jsonl_out="{params.dir}/ncbi_dataset/data/assembly_data_report.jsonl",
-       json_out="{params.dir}/ncbi_dataset/data/dataset_catalog.json"
-    wildcard_constraints:
-        fna_name=".+"
+       #fna_out="{params.dir}/ncbi_dataset/data/{params.acc}/{params.acc}{fna_name}genomic.fna",
+       #jsonl_out="{params.dir}/ncbi_dataset/data/assembly_data_report.jsonl",
+       #json_out="{params.dir}/ncbi_dataset/data/dataset_catalog.json"
+       
+    #wildcard_constraints:
+     #   fna_name=".+"
     shell:
         """
+        set -o xtrace
         mkdir -p {params.dir}
         datasets download genome accession {params.acc} --include genome,gtf --filename {params.dir}/{params.acc}.zip
         (cd {params.dir} && unzip {params.acc})
-        """
-
-rule set_dir_structure:
-    input:
-         file= "{params.dir}/{params.acc}.zip"
-    output: 
-        out_fna = "{organism}" + "/" + "{genome}" + "/" + "genomic.fna",
-        out_gtf = "{organism}" + "/" + "{genome}" + "/" + "genomic.gtf"
-    shell:    
-        """
-        
-        mv {params.dir}/ncbi_dataset/data/{params.acc}/{fna_name}genomic.fna {params.dir}/ncbi_dataset/data/{params.acc}/genomic.fna 
+        mv {params.dir}/ncbi_dataset/data/{params.acc}/*genomic.fna {params.dir}/ncbi_dataset/data/{params.acc}/genomic.fna 
         mv {params.dir}/ncbi_dataset/data/assembly_data_report.jsonl {params.dir}/ncbi_dataset/data/{params.acc}/
         mv {params.dir}/ncbi_dataset/data/dataset_catalog.json {params.dir}/ncbi_dataset/data/{params.acc}/
-        mv {params.dir}/ncbi_dataset/data/{params.acc}/ {params.dir}/
+        mv {params.dir}/ncbi_dataset/data/{params.acc}/ {params.dir}/.
         mv {params.dir}/README.md {params.dir}/{params.acc}
         rm {params.dir}/{params.acc}.zip
         rm -r {params.dir}/ncbi_dataset
         """
+
 #can add to get more files: ,rna,cds,protein,genome,seq-report - ASK KILEY 
 #possible values:
 
@@ -141,6 +134,17 @@ rule snpeff_config_creation:
 rule snpeff:
     envmodules:
         "snpeff"
+    input:
+    output:
+    shell:
+    """
+    echo "{genome}.genome : {organism} >> snpEff.config"
+    mkdir snpEff/data/{genome}
+    cd snpEff/data/{genome}
+    ln -s ../../../genomes/{organism}/{genome}/{genomic.fna} sequences.fa
+    ln -s ../../../genomes/{organism}/{genome}/{genomic.gtf} genes.gtf 
+
+    """
         echo "sacCer.genome : Yeast" >> snpEff.config
     
 
