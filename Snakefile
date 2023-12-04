@@ -8,9 +8,10 @@ log_dir   = "/orange/kgraim/panmammalian/genomes/logs"
 
 #Read in genome 
 GENOME_ACCESSIONS = []
+GENOME_PREFIX = []
 ORGANISM_NAME = []
 LAMEN_TERM = []
-with open("dog_test.csv", "r") as acc_file:
+with open("het.csv", "r") as acc_file:
     csv_reader = csv.reader(acc_file)
     for row in csv_reader:
         if (len(row) > 0):
@@ -20,7 +21,7 @@ with open("dog_test.csv", "r") as acc_file:
 
 print(GENOME_ACCESSIONS)
 print(ORGANISM_NAME)
-hisat_index=range(1,9)
+print(LAMEN_TERM)
 
 os.getcwd()
 ## All rule
@@ -33,8 +34,8 @@ rule all:
         #expand([final_results_dir + "/" + "{sample_sra_id}" + "/" + "quant.sf", final_results_dir + "/" + "{sample_sra_id}" + "/" + "cmd_info.json", final_results_dir + "/" + "{sample_sra_id}" + "/" + "lib_format_counts.json"], sample_sra_id=SRA_ACCESSIONS, pair_id=[ "_1","_2"])
         #expand("{organism}" + "/" + "{organism}"+ "_"+"{genome}_genomic.gff.gz", organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS)
         ## FIRST RULE BELOW
-        #expand( "{organism}" + "/" + "{genome}" + "/" + "genomic.fna", organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
-        #expand("{organism}" + "/" + "{genome}" + "/"+ "genomic.gtf", organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS)
+        # expand( "{organism}" + "/" + "{genome}" + "/" + "genomic.fna", organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
+        # expand("{organism}" + "/" + "{genome}" + "/"+ "genomic.gtf", organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS)
         #SECOND RULE 
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.1.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.2.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
@@ -44,7 +45,9 @@ rule all:
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.6.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.7.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
         expand(["{organism}" + "/" + "{genome}" + "/" + "hisat2" + "/" + "genomic.8.ht2"],zip ,organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
-        expand(["{organism}" + "/" + "{genome}" + "/" + "DEXSeqGff.gff"],zip, organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS)
+        expand(["{organism}" + "/" + "{genome}" + "/" + "DEXSeqGff.gff"],zip, organism=ORGANISM_NAME, genome=GENOME_ACCESSIONS),
+        # zip_gtf = "{organism}" + "/" + "{genome}" + "/" + "genomic.gtf.gz",
+        # zip_fna = "{organism}" + "/" + "{genome}" + "/" + "genomic.fna.gz"
         
 ## Pipeline 
 #fna file 
@@ -82,11 +85,24 @@ rule download_assemblies:
         mv {params.dir}/ncbi_dataset/data/{params.acc}/*genomic.fna {params.dir}/ncbi_dataset/data/{params.acc}/genomic.fna 
         mv {params.dir}/ncbi_dataset/data/assembly_data_report.jsonl {params.dir}/ncbi_dataset/data/{params.acc}/
         mv {params.dir}/ncbi_dataset/data/dataset_catalog.json {params.dir}/ncbi_dataset/data/{params.acc}/
-        mv {params.dir}/ncbi_dataset/data/{params.acc}/ {params.dir}/.
+        mv {params.dir}/ncbi_dataset/data/{params.acc}/ {params.dir}/
         mv {params.dir}/README.md {params.dir}/{params.acc}
         rm {params.dir}/{params.acc}.zip
         rm -r {params.dir}/ncbi_dataset
         """
+        # set -o xtrace 
+        # mkdir -p {params.dir}/{params.genome}
+        
+        # esearch -db assembly -query {params.genome} </dev/null | esummary | xtract -pattern DocumentSummary -element FtpPath_Genbank | 
+        # while read -r url ; do
+        #     fname=$(echo $url | grep -o 'GC[A,F]_.*' | sed 's/$/_genomic.fna.gz/') ;
+        #     wget "$url/$fname" -O {params.dir}/{params.genome}/genomic.fna.gz; 
+        # done ;
+        # "
+
+
+        # """
+       
 
 #can add to get more files: ,rna,cds,protein,genome,seq-report - ASK KILEY 
 #possible values:
@@ -117,41 +133,42 @@ rule hisat_build:
 
 rule dexseq:
     envmodules:
-        "htseq/2.0.3",
-        "python"
+        "htseq/2.0.3"
     input:
         in_gtf = "{organism}" + "/" + "{genome}" + "/" + "genomic.gtf"
     output:
-        target = "{organism}" + "/" + "{genome}" + "/" + "DEXSeqGff.gff"
+        target = "{organism}" + "/" + "{genome}" + "/" + "DEXSeqGff.gff",
+        # zip_gtf = "{organism}" + "/" + "{genome}" + "/" + "genomic.gtf.gz",
+        # zip_fna = "{organism}" + "/" + "{genome}" + "/" + "genomic.fna.gz"
     shell:
         """
         python ./scripts/dexseq_prepare_annotation.py {input.in_gtf} {output.target}
         """
-  
-'''  
-rule snpeff_config_creation: 
-    
-rule snpeff:
+
+rule snpEff:
     envmodules:
-        "snpeff"
+        "snpEff"
     input:
+        in_fna = "{organism}" + "/" + "{genome}" + "/" + "genomic.fna",
+        in_gtf = "{organism}" + "/" + "{genome}" + "/" + "genomic.gtf"
+        
     output:
+        target = "{organism}" + "/" + "{genome}" + "/" + "DEXSeqGff.gff",
+        # zip_gtf = "{organism}" + "/" + "{genome}" + "/" + "genomic.gtf.gz",
+        # zip_fna = "{organism}" + "/" + "{genome}" + "/" + "genomic.fna.gz"
     shell:
-    """
-    echo "{genome}.genome : {organism} >> snpEff.config"
-    mkdir snpEff/data/{genome}
-    cd snpEff/data/{genome}
-    ln -s ../../../genomes/{organism}/{genome}/{genomic.fna} sequences.fa
-    ln -s ../../../genomes/{organism}/{genome}/{genomic.gtf} genes.gtf 
-
-    """
-        echo "sacCer.genome : Yeast" >> snpEff.config
-    
-
+        """
+        echo "{genome}.genome : {organism} >> snpEff/snpEff.config"
+        mkdir snpEff/data/{genome}
+        cd snpEff/data/{genome}
+        ln -s /orange/kgraim/panmammalian/Panmammalian/genomes/{input.in_fna} sequences.fa
+        ln -s /orange/kgraim/panmammalian/Panmammalian/genomes/{input.in_gtf} genes.gtf 
+        cd /orange/kgraim/panmammalian/Panmammalian/genomes/snpEff
+        snpeff build -c snpEff.config -gtf22 -v {organism}
+        """
 
 
-
-
+'''  
 unzip {params.acc}.zip
     genome:     genomic sequence
                             * rna:        transcript
@@ -195,126 +212,6 @@ rule fastqc:
         fastqc {input.fastq_2} --quiet --o {fastqc_dir}/{wildcards.sample_sra_id}
         """
 
-rule fastp:
-    envmodules:
-        "fastqc/0.11.7",
-        "fastp"
-    log:
-        log_dir + "/" + "{sample_sra_id}.fastp_trim.log"
-    input:
-        #fastq   = fastq_dir + "/" + "{sample_sra_id}.fastq.gz"
-        fastq_1 = fastq_dir + "/" + "{sample_sra_id}_1.fastq.gz",
-        fastq_2 = fastq_dir + "/" + "{sample_sra_id}_2.fastq.gz"
-  
-    output:
-        #trim = fastq_trimmed_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_fastp.fastq.gz",
-        trim_1 = fastq_trimmed_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_1_fastp.fastq.gz",
-        trim_2 = fastq_trimmed_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_2_fastp.fastq.gz",
-        json_out = fastp_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_fastp.json",
-        html_out = fastp_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_fastp.html"       
-        #below: fastp -i {input.fastq_1} -I {input.fastq_2} -o {output.trim_1} -O {output.trim_2} --qualified_quality_phred 15 --length_required 20 --report_title {wildcards.sample_sra_id} --json {output.json_out} --html {output.html_out} 
-        #singleend: fastp -i {input.fastq} -o {output.trim}  --qualified_quality_phred 15 --length_required 20 --report_title {wildcards.sample_sra_id} --json {output.json_out} --html {output.html_out}
-
-    shell:
-        """
-        mkdir -p {fastq_trimmed_dir}/{wildcards.sample_sra_id}
-        fastp -i {input.fastq_1} -I {input.fastq_2} -o {output.trim_1} -O {output.trim_2} --qualified_quality_phred 15 --length_required 20 --report_title {wildcards.sample_sra_id} --json {output.json_out} --html {output.html_out} 
-        """
-rule indexprep:
-    params:
-        genome = genome_dir + "/" + config["GENOMES"]["PRIMARY_ASSEMBLY"],
-        transcripts =  genome_dir  + "/" + config["GENOMES"]["TRANSCRIPTS"]
-    output:
-        target_decoys = "decoys.txt",
-        reference_file = "gentrome.fa.gz"
-    shell:
-        """
-        grep "^>" <(gunzip -c {params.genome}) | cut -d " " -f 1 > {output.target_decoys} 
-        sed -i.bak -e 's/>//g' {output.target_decoys}
-        cat {params.transcripts} {params.genome} > {output.reference_file}
-
-        """
-
-rule salmonindex:
-    envmodules:
-        "salmon"
-    input:
-        target_decoys = "decoys.txt",
-        reference_file = "HOMO_SAPIENS_TRANSCRIPTOME_SHORT_1601578642.tar.gz"
-        #reference_file = "gentrome.fa.gz"
-    output:
-        reflens = salmon_dir + "/" + "complete_ref_lens.bin",
-        dupclus = salmon_dir + "/" + "duplicate_clusters.tsv",
-        pos = salmon_dir + "/" + "pos.bin",
-        refAccumLengths = salmon_dir + "/" + "refAccumLengths.bin",
-        refseq = salmon_dir + "/" + "refseq.bin",
-        ctable = salmon_dir + "/" + "ctable.bin",
-        info = salmon_dir + "/" + "info.json",
-        preindex = salmon_dir + "/" + "pre_indexing.log",
-        refindex = salmon_dir + "/" + "ref_indexing.log",
-        seq = salmon_dir + "/" + "seq.bin",
-        mphf = salmon_dir + "/" + "mphf.bin",
-        ctgoffsets = salmon_dir + "/" + "ctg_offsets.bin",
-        rank = salmon_dir + "/" + "rank.bin",
-        reflengths = salmon_dir + "/" + "reflengths.bin",
-        version = salmon_dir + "/" + "versionInfo.json"
-
-    shell:
-        """
-        salmon index -t {input.reference_file} -d {input.target_decoys} -p 12 -i {salmon_dir} --gencode
-        """
-
-rule salmonbuild:
-    envmodules:
-        "salmon/0.13.1"
-    input:
-        tsv = salmon_dir + "/" + "duplicate_clusters.tsv",
-        txt = salmon_dir + "/" + "genes_to_transcripts.txt",
-        hashbin = salmon_dir + "/" + "hash.bin",
-        header = salmon_dir + "/" + "header.json",
-        index = salmon_dir + "/" + "indexing.log",
-        quasi_index = salmon_dir + "/" + "quasi_index.log",
-        refInfo = salmon_dir + "/" + "refInfo.json",
-        rsdbin = salmon_dir + "/" + "rsd.bin",
-        sabin = salmon_dir + "/" + "sa.bin",
-        txp = salmon_dir + "/" + "txpInfo.bin",
-        version = salmon_dir + "/" + "versionInfo.json",
-        #trim = fastq_trimmed_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_fastp.fastq.gz"
-        #trim_1 =  fastq_trimmed_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_1_fastp.fastq.gz",
-        #trim_2 = fastq_trimmed_dir + "/" + "{sample_sra_id}" + "/" + "{sample_sra_id}_2_fastp.fastq.gz"
-        #trim = fastq_dir + "/" + "{sample_sra_id}.fastq.gz",
-        trim_1 = fastq_dir + "/" + "{sample_sra_id}_1.fastq.gz",
-        trim_2 = fastq_dir + "/" + "{sample_sra_id}_2.fastq.gz"
-    params:
-        result_dir = final_results_dir + "/" + "{sample_sra_id}"
-
-    output:
-        quant = final_results_dir + "/" + "{sample_sra_id}" +  "/" + "quant.sf",
-        cmd = final_results_dir + "/" + "{sample_sra_id}" +  "/" + "cmd_info.json",
-        libformat= final_results_dir + "/" + "{sample_sra_id}" +  "/" + "lib_format_counts.json"     
-        #salmon quant -i {salmon_dir} -l A -1 {input.trim_1} -2 {input.trim_2} -o {params.result_dir} --gcBias --seqBias --threads 4 
-        #salmon quant -i {salmon_dir} -l A -r {input.trim} -o {params.result_dir}  --seqBias --threads 4
-    shell:
-        """
-        salmon quant -i {salmon_dir} -l A -1 {input.trim_1} -2 {input.trim_2} -o {params.result_dir} --gcBias --seqBias --threads 4 
-        """
-
 """
-rule expression:
-    envmodules:
-        "R"
-    params:
-        indir = "salmon_quant",
-        accession_file = config["INPUT"]["ACCESSIONS_LIST"],
-        SRP_study = config["INPUT"]["SRP_STUDY"]
-    input:
-        quant = final_results_dir + "/" + "{sample_sra_id}" +  "/" + "quant.sf"
-        # input dir: final_results
-    output:
-        outfile = "expression.tsv"
-    shell:
-        
-        Rscript /home/leslie.smith1/blue_kgraim/leslie.smith1/new_SRA_dowloads/get_gene_expression_tximport.R {params.accession_file} {params.indir} {Routdir} {params.SRP_study}
-        """
-        '''
+
 
