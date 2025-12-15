@@ -10,6 +10,7 @@ nextflow.enable.dsl=2
  * 1. Downloading genome assemblies and annotations from NCBI
  * 2. Building genome indices (FAI, DICT, HISAT2)
  * 3. Preparing DEXSeq annotation files
+ * Run time ~ 24 min per mammal
  */
 
 // Parameters
