@@ -36,3 +36,10 @@ Output all has the following columns (these headers do not exist in the output.c
 	2) Creating `.fai` and `.dict` file needed for.
 	3) Building the indexes needed for hisat2.
 	4) Creating `.gff` files needed for DexSeq.
+
+
+NOTE: There are several options for queried mammalian genomes that do not currently have a gene annotation file:
+1) The current reference genome may have a corresponding ![TOGA annotation](https://genome.senckenberg.de/download/TOGA/). We use the `human_hg38_reference/` for one of our mammals. If using these annotations you must check to ensure chromosomes match the downloaed genome fasta file. Often times the chromosomes do not match exactly, however a simple replacement using sed or awk can get them to match (for example the chromosomes may match except maybe the TOGA annotation has ad additional ".1" suffix or "chr" prefix.).
+2) Another option is to use a difference genome other than the reference that may have a corresponding gene annotation. 
+
+We initially tried to accomodate these options in the pipeline, however due to the inconsistencies in TOGA chromosome matching and many additional constraints in choosing anothe genome to use, we decided this is best done manually to ensure correctness.
